@@ -22,8 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-@_exported import URI
-@_exported import Log
+@_exported import C7
 
 
 /**
@@ -45,8 +44,6 @@ public protocol ConnectionProtocol: class {
     associatedtype Result: ResultProtocol
     associatedtype Error: ErrorProtocol
     associatedtype ConnectionInfo: ConnectionInfoProtocol
-    
-    var logger: Logger? { get set }
     
     var connectionInfo: ConnectionInfo { get }
 

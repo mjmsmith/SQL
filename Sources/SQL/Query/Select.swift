@@ -114,7 +114,7 @@ public extension SelectQuery {
     public var queryComponents: QueryComponents {
         var components = QueryComponents(components: [
             "SELECT",
-            fields.isEmpty ? "*" : fields.queryComponentsForSelectingFields(useQualifiedNames: true, useAliasing: true, isolateQueryComponents: false),
+            fields.isEmpty ? QueryComponents("\(tableName).*") : fields.queryComponentsForSelectingFields(useQualifiedNames: true, useAliasing: true, isolateQueryComponents: false),
             "FROM",
             QueryComponents(tableName)
             ]
