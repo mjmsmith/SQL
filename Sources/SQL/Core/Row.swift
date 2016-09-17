@@ -41,7 +41,7 @@ public protocol RowProtocol: CustomStringConvertible {
     var dataByfield: [String: Data?] { get }
 }
 
-public enum RowProtocolError: ErrorProtocol {
+public enum RowProtocolError: Error {
     case ExpectedField(DeclaredField)
     case UnexpectedNilValue(DeclaredField)
 }

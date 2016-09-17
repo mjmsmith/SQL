@@ -49,7 +49,7 @@ public struct RowIterator: RowIteratorProtocol {
     let block: (Void) -> Element?
     var index: Int = 0
 
-    init(block: (Void) -> Element?) {
+    init(block: @escaping (Void) -> Element?) {
         self.block = block
     }
 

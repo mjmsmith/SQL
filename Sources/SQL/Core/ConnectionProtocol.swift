@@ -42,7 +42,7 @@ public protocol ConnectionInfoProtocol {
 public protocol ConnectionProtocol: class {
     associatedtype InternalStatus
     associatedtype Result: ResultProtocol
-    associatedtype Error: ErrorProtocol
+    associatedtype ConnectionProtocolError: Error
     associatedtype ConnectionInfo: ConnectionInfoProtocol
     
     var connectionInfo: ConnectionInfo { get }
@@ -69,7 +69,7 @@ public protocol ConnectionProtocol: class {
 
     init(_ info: ConnectionInfo)
     
-    var mostRecentError: Error? { get }
+    var mostRecentError: ConnectionProtocolError? { get }
     
     func executeInsertQuery<T: SQLDataConvertible>(query: InsertQuery, returningPrimaryKeyForField primaryKey: DeclaredField) throws -> T
 }
@@ -124,14 +124,14 @@ public extension ConnectionProtocol {
     }
 
     public func begin() throws {
-        try execute("BEGIN")
+        _ = try execute("BEGIN")
     }
 
     public func commit() throws {
-        try execute("COMMIT")
+        _ = try execute("COMMIT")
     }
 
     public func rollback() throws {
-        try execute("ROLLBACK")
+        _ = try execute("ROLLBACK")
     }
 }

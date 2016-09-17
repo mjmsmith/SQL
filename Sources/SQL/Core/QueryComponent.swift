@@ -1,3 +1,5 @@
+import Foundation
+
 // QueryComponents.swift
 //
 // The MIT License (MIT)
@@ -27,7 +29,7 @@ public struct QueryComponents: CustomStringConvertible {
     
     internal static let valuePlaceholder = "%@"
     
-    public struct Error: ErrorProtocol {
+    public struct QueryComponentsError: Error {
         public let description: String
     }
     
@@ -40,14 +42,14 @@ public struct QueryComponents: CustomStringConvertible {
     
     public func stringWithEscapedValuesUsingPrefix(_ prefix: String, suffix: String? = nil, transformer: (Int, SQLData?) -> String) throws -> String {
         
-        var strings = string.split(byString: QueryComponents.valuePlaceholder)
+        var strings = string.components(separatedBy: QueryComponents.valuePlaceholder)
         
         if strings.count == 1 {
             return string
         }
         
         guard strings.count == values.count + 1 else {
-            throw Error(description: "Parameter count mismatch")
+            throw QueryComponentsError(description: "Parameter count mismatch")
         }
         
         var newStrings = [String]()
@@ -133,7 +135,7 @@ public struct QueryComponents: CustomStringConvertible {
     }
 }
 
-extension QueryComponents: StringLiteralConvertible {
+extension QueryComponents: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         self.init(value)
     }

@@ -199,7 +199,7 @@ public protocol FieldProtocol: RawRepresentable, Hashable {
 }
 
 
-public struct ModelError: ErrorProtocol {
+public struct ModelError: Error {
     public let description: String
     
     public init(description: String) {
@@ -336,20 +336,20 @@ public extension Model {
         return selectFields.map { Self.field($0) }
     }
     
-    public static func get<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ pk: Self.PrimaryKey, connection: T) throws -> Self? {
+    public static func get<T: ConnectionProtocol>(_ pk: Self.PrimaryKey, connection: T) throws -> Self? where T.Result.Iterator.Element == Row {
         return try selectQuery.filter(declaredPrimaryKeyField == pk).first(connection)
     }
     
-    mutating func create<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws {
+    mutating func create<T: ConnectionProtocol>(_ connection: T) throws where T.Result.Iterator.Element == Row {
         guard !isPersisted else {
             throw ModelError(description: "Cannot create an already persisted model.")
         }
         
         try validate()
                 
-        let pk: PrimaryKey = try connection.executeInsertQuery(query: self.dynamicType.insertQuery(values: persistedValuesByField), returningPrimaryKeyForField: self.dynamicType.declaredPrimaryKeyField)
+        let pk: PrimaryKey = try connection.executeInsertQuery(query: type(of: self).insertQuery(values: persistedValuesByField), returningPrimaryKeyForField: type(of: self).declaredPrimaryKeyField)
         
-        guard let newSelf = try self.dynamicType.get(pk, connection: connection) else {
+        guard let newSelf = try type(of: self).get(pk, connection: connection) else {
             throw ModelError(description: "Failed to find model of supposedly inserted id \(pk)")
         }
         
@@ -360,8 +360,8 @@ public extension Model {
         didSave()
     }
     
-    public mutating func refresh<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws {
-        guard let pk = primaryKey, newSelf = try Self.get(pk, connection: connection) else {
+    public mutating func refresh<T: ConnectionProtocol>(_ connection: T) throws where T.Result.Iterator.Element == Row {
+        guard let pk = primaryKey, let newSelf = try Self.get(pk, connection: connection) else {
             throw ModelError(description: "Cannot refresh a non-persisted model. Please use insert() or save() first.")
         }
         
@@ -370,7 +370,7 @@ public extension Model {
         didRefresh()
     }
     
-    public mutating func update<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws {
+    public mutating func update<T: ConnectionProtocol>(_ connection: T) throws where T.Result.Iterator.Element == Row {
         guard let pk = primaryKey else {
             throw ModelError(description: "Cannot update a model that isn't persisted. Please use insert() first or save()")
         }
@@ -385,7 +385,7 @@ public extension Model {
         
         willSave()
         willUpdate()
-        try Self.updateQuery(values).filter(Self.declaredPrimaryKeyField == pk).execute(connection)
+        _ = try Self.updateQuery(values).filter(Self.declaredPrimaryKeyField == pk).execute(connection)
         didUpdate()
         try self.refresh(connection)
         didSave()
@@ -397,11 +397,11 @@ public extension Model {
         }
         
         willDelete()
-        try Self.deleteQuery.filter(Self.declaredPrimaryKeyField == pk).execute(connection)
+        _ = try Self.deleteQuery.filter(Self.declaredPrimaryKeyField == pk).execute(connection)
         didDelete()
     }
 
-    public mutating func save<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws {
+    public mutating func save<T: ConnectionProtocol>(_ connection: T) throws where T.Result.Iterator.Element == Row {
         
         if isPersisted {
             try update(connection)

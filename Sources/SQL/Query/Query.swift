@@ -40,11 +40,11 @@ public protocol ModelQuery: TableQuery {
 }
 
 public extension ModelQuery where Self: FetchQuery {
-    public func fetch<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws -> [ModelType] {
+    public func fetch<T: ConnectionProtocol>(_ connection: T) throws -> [ModelType] where T.Result.Iterator.Element == Row {
         return try connection.execute(self).map { try ModelType(row: $0) }
     }
     
-    public func first<T: ConnectionProtocol where T.Result.Iterator.Element == Row>(_ connection: T) throws -> ModelType? {
+    public func first<T: ConnectionProtocol>(_ connection: T) throws -> ModelType? where T.Result.Iterator.Element == Row {
         var new = self
         new.offset = 0
         new.limit = 1
@@ -72,7 +72,7 @@ public struct Limit: QueryComponentsConvertible {
     }
 }
 
-extension Limit: IntegerLiteralConvertible {
+extension Limit: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
         self.value = value
     }
@@ -90,7 +90,7 @@ public struct Offset: QueryComponentsConvertible {
     }
 }
 
-extension Offset: IntegerLiteralConvertible {
+extension Offset: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
         self.value = value
     }
@@ -178,7 +178,7 @@ public extension FetchQuery {
     
     public var page: Int? {
         set {
-            guard let value = newValue, limit = limit else {
+            guard let value = newValue, let limit = limit else {
                 offset = nil
                 return
             }
@@ -186,7 +186,7 @@ public extension FetchQuery {
         }
         
         get {
-            guard let offset = offset, limit = limit else {
+            guard let offset = offset, let limit = limit else {
                 return nil
             }
             
