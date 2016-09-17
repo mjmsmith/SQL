@@ -37,7 +37,7 @@ public struct QueryComponents: CustomStringConvertible {
     public var values: [SQLData?]
 
     public var string: String {
-        return stringComponents.filter { !$0.isEmpty }.map { $0.trim() }.joined(separator: " ")
+      return stringComponents.filter { !$0.isEmpty }.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.joined(separator: " ")
     }
     
     public func stringWithEscapedValuesUsingPrefix(_ prefix: String, suffix: String? = nil, transformer: (Int, SQLData?) -> String) throws -> String {
