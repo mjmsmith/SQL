@@ -22,8 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-@_exported import C7
-
+import Foundation
 
 /**
  *  ConnectionInfoProtocol is an adapter-specific protocol that holds necessary
@@ -36,7 +35,7 @@ public protocol ConnectionInfoProtocol {
     var username: String? { get }
     var password: String? { get }
     
-    init(_ uri: URI) throws
+    init(_ uri: URL) throws
 }
 
 public protocol ConnectionProtocol: class {
@@ -67,7 +66,7 @@ public protocol ConnectionProtocol: class {
 
     func rollbackToSavePointNamed(_ name: String) throws
 
-    init(_ info: ConnectionInfo)
+    init(info: ConnectionInfo)
     
     var mostRecentError: ConnectionProtocolError? { get }
     
@@ -76,8 +75,8 @@ public protocol ConnectionProtocol: class {
 
 public extension ConnectionProtocol {
     
-    public init(_ uri: URI) throws {
-        try self.init(ConnectionInfo(uri))
+    public init(_ uri: URL) throws {
+      try self.init(info: ConnectionInfo(uri))
     }
 
     public func transaction(block: (Void) throws -> Void) throws {

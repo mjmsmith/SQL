@@ -22,6 +22,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import Foundation
+
 public struct SQLDataConversionError: Error {
     let description: String
 }
@@ -39,7 +41,8 @@ public protocol SQLDataConvertible {
 
 extension Int: SQLDataConvertible {
     public init(rawSQLData data: Data) throws {
-        guard let value = Int(try String(data: data)) else {
+      guard let string = String(data: data, encoding: .utf8),
+            let value = Int(string) else {
             throw SQLDataConversionError(description: "Failed to convert data to Int")
         }
         self = value
@@ -52,7 +55,8 @@ extension Int: SQLDataConvertible {
 
 extension UInt: SQLDataConvertible {
     public init(rawSQLData data: Data) throws {
-        guard let value = UInt(try String(data: data)) else {
+      guard let string = String(data: data, encoding: .utf8),
+            let value = UInt(string) else {
             throw SQLDataConversionError(description: "Failed to convert data to UInt")
         }
         self = value
@@ -65,7 +69,8 @@ extension UInt: SQLDataConvertible {
 
 extension Float: SQLDataConvertible {
     public init(rawSQLData data: Data) throws {
-        guard let value = Float(try String(data: data)) else {
+        guard let string = String(data: data, encoding: .utf8),
+              let value = Float(string) else {
             throw SQLDataConversionError(description: "Failed to convert data to Float")
         }
         self = value
@@ -78,7 +83,8 @@ extension Float: SQLDataConvertible {
 
 extension Double: SQLDataConvertible {
     public init(rawSQLData data: Data) throws {
-        guard let value = Double(try String(data: data)) else {
+      guard let string = String(data: data, encoding: .utf8),
+            let value = Double(string) else {
             throw SQLDataConversionError(description: "Failed to convert data to Double")
         }
         self = value
@@ -91,7 +97,10 @@ extension Double: SQLDataConvertible {
 
 extension String: SQLDataConvertible {
     public init(rawSQLData data: Data) throws {
-        try self.init(data: data)
+      guard let value = String(data: data, encoding: .utf8) else {
+        throw SQLDataConversionError(description: "Failed to convert data to Double")
+      }
+      self = value
     }
 
     public var sqlData: SQLData {
