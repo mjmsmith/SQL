@@ -23,41 +23,39 @@
 // SOFTWARE.
 
 public struct Delete: DeleteQuery {
+  public let tableName: String
+  public var condition: Condition? = nil
     
-    public let tableName: String
-    public var condition: Condition? = nil
-    
-    public init(from tableName: String) {
-        self.tableName = tableName
-    }
+  public init(from tableName: String) {
+    self.tableName = tableName
+  }
 }
 
 public struct ModelDelete<T: Model>: DeleteQuery {
-    public typealias ModelType = T
+  public typealias ModelType = T
     
-    public var tableName: String {
-        return ModelType.tableName
-    }
+  public var tableName: String {
+    return ModelType.tableName
+  }
     
-    public var condition: Condition? = nil
+  public var condition: Condition? = nil
 }
 
 public protocol DeleteQuery: FilteredQuery, TableQuery {}
 
 extension DeleteQuery {
-    public init<T: Model>(from tableName: T.Type) {
-        self.init(from: tableName)
-    }
+  public init<T: Model>(from tableName: T.Type) {
+    self.init(from: tableName)
+  }
     
-    public var queryComponents: QueryComponents {
+  public var queryComponents: QueryComponents {
+    var queryComponents = QueryComponents(strings: ["DELETE", "FROM", tableName])
         
-        var queryComponents = QueryComponents(strings: ["DELETE", "FROM", tableName])
-        
-        if let condition = condition {
-            queryComponents.append("WHERE")
-            queryComponents.append(condition.queryComponents)
-        }
-        
-        return queryComponents
+    if let condition = condition {
+      queryComponents.append("WHERE")
+      queryComponents.append(condition.queryComponents)
     }
+        
+    return queryComponents
+  }
 }

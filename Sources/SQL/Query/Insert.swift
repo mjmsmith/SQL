@@ -23,83 +23,79 @@
 // SOFTWARE.
 
 public struct Insert: InsertQuery {
-    public let tableName: String
-    public let valuesByField: [DeclaredField: SQLData?]
+  public let tableName: String
+  public let valuesByField: [DeclaredField: SQLData?]
     
-    public init(_ valuesByField: [DeclaredField : SQLData?], into tableName: String) {
-        self.tableName = tableName
-        self.valuesByField = valuesByField
-    }
+  public init(_ valuesByField: [DeclaredField : SQLData?], into tableName: String) {
+    self.tableName = tableName
+    self.valuesByField = valuesByField
+  }
     
-    public init(_ valuesByField: [DeclaredField : SQLDataConvertible?], into tableName: String) {
+  public init(_ valuesByField: [DeclaredField : SQLDataConvertible?], into tableName: String) {
+    var dict = [DeclaredField: SQLData?]()
         
-        var dict = [DeclaredField: SQLData?]()
-        
-        for (key, value) in valuesByField {
-            dict[key] = value?.sqlData
-        }
-        
-        self.init(dict, into: tableName)
+    for (key, value) in valuesByField {
+      dict[key] = value?.sqlData
     }
+        
+    self.init(dict, into: tableName)
+  }
     
-    public init(_ valuesByField: [String : SQLDataConvertible?], into tableName: String) {
+  public init(_ valuesByField: [String : SQLDataConvertible?], into tableName: String) {
+    var dict = [DeclaredField: SQLData?]()
         
-        var dict = [DeclaredField: SQLData?]()
-        
-        for (key, value) in valuesByField {
-            dict[DeclaredField(name: key)] = value?.sqlData
-        }
-        
-        self.init(dict, into: tableName)
+    for (key, value) in valuesByField {
+      dict[DeclaredField(name: key)] = value?.sqlData
     }
+        
+    self.init(dict, into: tableName)
+  }
 }
 
 public struct ModelInsert<T: Model>: InsertQuery {
-    public typealias ModelType = T
+  public typealias ModelType = T
     
-    public var tableName: String {
-        return ModelType.tableName
+  public var tableName: String {
+    return ModelType.tableName
+  }
+    
+  public let valuesByField: [DeclaredField: SQLData?]
+    
+  public init(_ values: [ModelType.Field: SQLData?]) {
+    var dict = [DeclaredField: SQLData?]()
+        
+    for (key, value) in values {
+      dict[ModelType.field(key)] = value
     }
-    
-    public let valuesByField: [DeclaredField: SQLData?]
-    
-    public init(_ values: [ModelType.Field: SQLData?]) {
-        var dict = [DeclaredField: SQLData?]()
         
-        for (key, value) in values {
-            dict[ModelType.field(key)] = value
-        }
+    self.valuesByField = dict
+  }
+    
+  public init(_ values: [ModelType.Field: SQLDataConvertible?]) {
+    var dict = [DeclaredField: SQLData?]()
         
-        self.valuesByField = dict
+    for (key, value) in values {
+      dict[ModelType.field(key)] = value?.sqlData
     }
-    
-    public init(_ values: [ModelType.Field: SQLDataConvertible?]) {
-        var dict = [DeclaredField: SQLData?]()
         
-        for (key, value) in values {
-            dict[ModelType.field(key)] = value?.sqlData
-        }
-        
-        self.valuesByField = dict
-    }
-    
+    self.valuesByField = dict
+  }
 }
 
 public protocol InsertQuery : TableQuery {
-    var valuesByField: [DeclaredField: SQLData?] { get }
+  var valuesByField: [DeclaredField: SQLData?] { get }
 }
 
 extension InsertQuery {
-    public var queryComponents: QueryComponents {
-        return QueryComponents(
-            components: [
-                "INSERT INTO",
-                QueryComponents(tableName),
-                valuesByField.keys.queryComponentsForSelectingFields(useQualifiedNames: false, useAliasing: false, isolateQueryComponents: true),
-                "VALUES",
-                valuesByField.map { $0 }.queryComponentsForValuePlaceHolders(isolated: true)
-            ]
-        )
-        
-    }
+  public var queryComponents: QueryComponents {
+    return QueryComponents(
+      components: [
+        "INSERT INTO",
+        QueryComponents(tableName),
+        valuesByField.keys.queryComponentsForSelectingFields(useQualifiedNames: false, useAliasing: false, isolateQueryComponents: true),
+        "VALUES",
+        valuesByField.map { $0 }.queryComponentsForValuePlaceHolders(isolated: true)
+      ]
+    )
+  }
 }

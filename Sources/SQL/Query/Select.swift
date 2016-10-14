@@ -24,124 +24,110 @@
 
 
 public struct Select: SelectQuery {
-    public let fields: [DeclaredField]
+  public let fields: [DeclaredField]
+  public let tableName: String
+  public var condition: Condition? = nil
+  public var joins: [Join] = []
+  public var offset: Offset? = nil
+  public var limit: Limit? = nil
+  public var orderBy: [OrderBy] = []
     
-    public let tableName: String
+  public init(_ fields: [DeclaredField], from tableName: String) {
+    self.tableName = tableName
+    self.fields = fields
+  }
     
-    public var condition: Condition? = nil
+  public init(from tableName: String) {
+    self.tableName = tableName
+    self.fields = []
+  }
     
-    public var joins: [Join] = []
+  public init(_ fields: [String], from tableName: String) {
+    self.init(fields.map { DeclaredField(name: $0) }, from: tableName)
+  }
     
-    public var offset: Offset? = nil
+  public func join(_ tableName: String, using type: [Join.JoinType], leftKey: String, rightKey: String) -> Select {
+    var new = self
     
-    public var limit: Limit? = nil
-    
-    public var orderBy: [OrderBy] = []
-    
-    public init(_ fields: [DeclaredField], from tableName: String) {
-        self.tableName = tableName
-        self.fields = fields
-    }
-    
-    public init(from tableName: String) {
-        self.tableName = tableName
-        self.fields = []
-    }
-    
-    public init(_ fields: [String], from tableName: String) {
-        self.init(fields.map { DeclaredField(name: $0) }, from: tableName)
-    }
-    
-    public func join(_ tableName: String, using type: [Join.JoinType], leftKey: String, rightKey: String) -> Select {
-        var new = self
-        new.joins.append(
-            Join(tableName, type: type, leftKey: leftKey, rightKey: rightKey)
-        )
+    new.joins.append(Join(tableName, type: type, leftKey: leftKey, rightKey: rightKey))
         
-        return new
-    }
+    return new
+  }
     
-    public func join(_ tableName: String, using type: Join.JoinType, leftKey: String, rightKey: String) -> Select {
-        return join(tableName, using: [type], leftKey: leftKey, rightKey: rightKey)
-    }
+  public func join(_ tableName: String, using type: Join.JoinType, leftKey: String, rightKey: String) -> Select {
+    return join(tableName, using: [type], leftKey: leftKey, rightKey: rightKey)
+  }
 }
 
 public struct ModelSelect<T: Model>: SelectQuery, ModelQuery {
-    public typealias ModelType = T
+  public typealias ModelType = T
     
-    public var tableName: String {
-        return T.tableName
-    }
+  public var tableName: String {
+    return T.tableName
+  }
     
-    public let fields: [DeclaredField]
+  public let fields: [DeclaredField]
+  public var condition: Condition? = nil
+  public var joins: [Join] = []
+  public var offset: Offset? = nil
+  public var limit: Limit? = nil
+  public var orderBy: [OrderBy] = []
     
-    public var condition: Condition? = nil
+  public func join<R: Model>(_ model: R.Type, using type: [Join.JoinType], leftKey: ModelType.Field, rightKey: R.Field) -> ModelSelect<T> {
+    var new = self
     
-    public var joins: [Join] = []
-    
-    public var offset: Offset? = nil
-    
-    public var limit: Limit? = nil
-    
-    public var orderBy: [OrderBy] = []
-    
-    public func join<R: Model>(_ model: R.Type, using type: [Join.JoinType], leftKey: ModelType.Field, rightKey: R.Field) -> ModelSelect<T> {
-        var new = self
-        new.joins.append(
-            Join(R.tableName, type: type, leftKey: ModelType.field(leftKey).qualifiedName, rightKey: R.field(rightKey).qualifiedName)
-        )
+    new.joins.append(
+      Join(R.tableName, type: type, leftKey: ModelType.field(leftKey).qualifiedName, rightKey: R.field(rightKey).qualifiedName)
+    )
         
-        return new
-    }
+    return new
+  }
     
-    public func join<R: Model>(_ model: R.Type, using type: Join.JoinType, leftKey: ModelType.Field, rightKey: R.Field) -> ModelSelect<T> {
-        return join(model, using: [type], leftKey: leftKey, rightKey: rightKey)
-    }
+  public func join<R: Model>(_ model: R.Type, using type: Join.JoinType, leftKey: ModelType.Field, rightKey: R.Field) -> ModelSelect<T> {
+    return join(model, using: [type], leftKey: leftKey, rightKey: rightKey)
+  }
 
-    public init(_ fields: [DeclaredField]? = nil) {
-        self.fields = fields ?? T.selectFields.map { T.field($0) }
-    }
+  public init(_ fields: [DeclaredField]? = nil) {
+    self.fields = fields ?? T.selectFields.map { T.field($0) }
+  }
 }
 
 public protocol SelectQuery: FilteredQuery, FetchQuery {
-    var joins: [Join] { get set }
-    
-    var fields: [DeclaredField] { get }
+  var joins: [Join] { get set }
+  var fields: [DeclaredField] { get }
 }
 
 public extension SelectQuery {
-    
-    public var queryComponents: QueryComponents {
-        var components = QueryComponents(components: [
-            "SELECT",
-            fields.isEmpty ? QueryComponents("\(tableName).*") : fields.queryComponentsForSelectingFields(useQualifiedNames: true, useAliasing: true, isolateQueryComponents: false),
-            "FROM",
-            QueryComponents(tableName)
-            ]
-        )
+  public var queryComponents: QueryComponents {
+    var components = QueryComponents(components: [
+      "SELECT",
+      fields.isEmpty ? QueryComponents("\(tableName).*") : fields.queryComponentsForSelectingFields(useQualifiedNames: true, useAliasing: true, isolateQueryComponents: false),
+      "FROM",
+      QueryComponents(tableName)
+    ])
         
-        if !joins.isEmpty {
-            components.append(joins.queryComponents)
-        }
-        
-        if let condition = condition {
-            components.append("WHERE")
-            components.append(condition.queryComponents)
-        }
-        
-        if !orderBy.isEmpty {
-            components.append("ORDER BY")
-            components.append(orderBy.queryComponents(mergedByString: ","))
-        }
-        
-        if let limit = limit {
-            components.append(limit.queryComponents)
-        }
-        
-        if let offset = offset {
-            components.append(offset.queryComponents)
-        }
-        
-        return components
+    if !joins.isEmpty {
+      components.append(joins.queryComponents)
     }
+        
+    if let condition = condition {
+      components.append("WHERE")
+      components.append(condition.queryComponents)
+    }
+        
+    if !orderBy.isEmpty {
+      components.append("ORDER BY")
+      components.append(orderBy.queryComponents(mergedByString: ","))
+    }
+        
+    if let limit = limit {
+      components.append(limit.queryComponents)
+      }
+        
+    if let offset = offset {
+      components.append(offset.queryComponents)
+    }
+        
+    return components
+  }
 }

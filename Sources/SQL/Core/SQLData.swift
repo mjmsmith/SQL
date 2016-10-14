@@ -25,95 +25,100 @@
 import Foundation
 
 public struct SQLDataConversionError: Error {
-    let description: String
+  let description: String
 }
 
 public enum SQLData {
-    case Text(String)
-    case Binary(Data)
+  case Text(String)
+  case Binary(Data)
 }
 
 public protocol SQLDataConvertible {
-    var sqlData: SQLData { get }
+  var sqlData: SQLData { get }
 
-    init(rawSQLData: Data) throws
+  init(rawSQLData: Data) throws
 }
 
 extension Int: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-      guard let string = String(data: data, encoding: .utf8),
-            let value = Int(string) else {
-            throw SQLDataConversionError(description: "Failed to convert data to Int")
-        }
-        self = value
+  public init(rawSQLData data: Data) throws {
+    guard let string = String(data: data, encoding: .utf8),
+          let value = Int(string) else {
+      throw SQLDataConversionError(description: "Failed to convert data to Int")
     }
+    
+    self = value
+  }
 
-    public var sqlData: SQLData {
-        return .Text(String(self))
-    }
+  public var sqlData: SQLData {
+    return .Text(String(self))
+  }
 }
 
 extension UInt: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-      guard let string = String(data: data, encoding: .utf8),
-            let value = UInt(string) else {
-            throw SQLDataConversionError(description: "Failed to convert data to UInt")
-        }
-        self = value
+  public init(rawSQLData data: Data) throws {
+    guard let string = String(data: data, encoding: .utf8),
+          let value = UInt(string) else {
+      throw SQLDataConversionError(description: "Failed to convert data to UInt")
     }
+    
+    self = value
+  }
 
-    public var sqlData: SQLData {
-        return .Text(String(self))
-    }
+  public var sqlData: SQLData {
+    return .Text(String(self))
+  }
 }
 
 extension Float: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-        guard let string = String(data: data, encoding: .utf8),
-              let value = Float(string) else {
-            throw SQLDataConversionError(description: "Failed to convert data to Float")
-        }
-        self = value
+  public init(rawSQLData data: Data) throws {
+    guard let string = String(data: data, encoding: .utf8),
+          let value = Float(string) else {
+      throw SQLDataConversionError(description: "Failed to convert data to Float")
     }
+      
+    self = value
+  }
 
-    public var sqlData: SQLData {
-        return .Text(String(self))
-    }
+  public var sqlData: SQLData {
+    return .Text(String(self))
+  }
 }
 
 extension Double: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-      guard let string = String(data: data, encoding: .utf8),
-            let value = Double(string) else {
-            throw SQLDataConversionError(description: "Failed to convert data to Double")
-        }
-        self = value
+  public init(rawSQLData data: Data) throws {
+    guard let string = String(data: data, encoding: .utf8),
+          let value = Double(string) else {
+      throw SQLDataConversionError(description: "Failed to convert data to Double")
     }
+    
+    self = value
+  }
 
-    public var sqlData: SQLData {
-        return .Text(String(self))
-    }
+  public var sqlData: SQLData {
+    return .Text(String(self))
+  }
 }
 
 extension String: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-      guard let value = String(data: data, encoding: .utf8) else {
-        throw SQLDataConversionError(description: "Failed to convert data to Double")
-      }
-      self = value
+  public init(rawSQLData data: Data) throws {
+    guard let value = String(data: data, encoding: .utf8) else {
+      throw SQLDataConversionError(description: "Failed to convert data to Double")
     }
+    
+    self = value
+  }
 
-    public var sqlData: SQLData {
-        return .Text(self)
-    }
+  public var sqlData: SQLData {
+    return .Text(self)
+  }
 }
 
 extension Data: SQLDataConvertible {
-    public init(rawSQLData data: Data) throws {
-        self = data
-    }
+  public init(rawSQLData data: Data) throws {
+    self = data
+  }
 
-    public var sqlData: SQLData {
-        return .Binary(self)
-    }
+  public var sqlData: SQLData {
+    return .Binary(self)
+  }
 }

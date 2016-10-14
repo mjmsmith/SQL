@@ -22,288 +22,290 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
 public protocol Query: QueryComponentsConvertible {}
 
 public extension Query {
-    public func execute<T: ConnectionProtocol>(_ connection: T) throws -> T.Result {
-        return try connection.execute(self)
-    }
+  public func execute<T: ConnectionProtocol>(_ connection: T) throws -> T.Result {
+    return try connection.execute(self)
+  }
 }
 
 public protocol TableQuery: Query {
-    var tableName: String { get }
+  var tableName: String { get }
 }
 
 public protocol ModelQuery: TableQuery {
-    associatedtype ModelType: Model
+  associatedtype ModelType: Model
 }
 
 public extension ModelQuery where Self: FetchQuery {
-    public func fetch<T: ConnectionProtocol>(_ connection: T) throws -> [ModelType] where T.Result.Iterator.Element == Row {
-        return try connection.execute(self).map { try ModelType(row: $0) }
-    }
+  public func fetch<T: ConnectionProtocol>(_ connection: T) throws -> [ModelType] where T.Result.Iterator.Element == Row {
+    return try connection.execute(self).map { try ModelType(row: $0) }
+  }
     
-    public func first<T: ConnectionProtocol>(_ connection: T) throws -> ModelType? where T.Result.Iterator.Element == Row {
-        var new = self
-        new.offset = 0
-        new.limit = 1
-        return try connection.execute(new).map { try ModelType(row: $0) }.first
-    }
+  public func first<T: ConnectionProtocol>(_ connection: T) throws -> ModelType? where T.Result.Iterator.Element == Row {
+    var new = self
+    new.offset = 0
+    new.limit = 1
+    return try connection.execute(new).map { try ModelType(row: $0) }.first
+  }
     
-    public func orderBy(_ values: [ModelOrderBy<ModelType>]) -> Self {
-        return orderBy(values.map { $0.normalize })
-    }
+  public func orderBy(_ values: [ModelOrderBy<ModelType>]) -> Self {
+    return orderBy(values.map { $0.normalize })
+  }
     
-    public func orderBy(_ values: ModelOrderBy<ModelType>...) -> Self {
-        return orderBy(values)
-    }
+  public func orderBy(_ values: ModelOrderBy<ModelType>...) -> Self {
+    return orderBy(values)
+  }
 }
 
 public struct Limit: QueryComponentsConvertible {
-    public let value: Int
+  public let value: Int
     
-    public init(_ value: Int) {
-        self.value = value
-    }
+  public init(_ value: Int) {
+    self.value = value
+  }
     
-    public var queryComponents: QueryComponents {
-        return QueryComponents(strings: ["LIMIT", String(value)])
-    }
+  public var queryComponents: QueryComponents {
+    return QueryComponents(strings: ["LIMIT", String(value)])
+  }
 }
 
 extension Limit: ExpressibleByIntegerLiteral {
-    public init(integerLiteral value: Int) {
-        self.value = value
-    }
+  public init(integerLiteral value: Int) {
+    self.value = value
+  }
 }
 
 public struct Offset: QueryComponentsConvertible {
-    public let value: Int
+  public let value: Int
     
-    public init(_ value: Int) {
-        self.value = value
-    }
+  public init(_ value: Int) {
+    self.value = value
+  }
     
-    public var queryComponents: QueryComponents {
-        return QueryComponents(strings: ["OFFSET", String(value)])
-    }
+  public var queryComponents: QueryComponents {
+    return QueryComponents(strings: ["OFFSET", String(value)])
+  }
 }
 
 extension Offset: ExpressibleByIntegerLiteral {
-    public init(integerLiteral value: Int) {
-        self.value = value
-    }
+  public init(integerLiteral value: Int) {
+    self.value = value
+  }
 }
 
 public enum OrderBy: QueryComponentsConvertible {
-    case Ascending(String)
-    case Descending(String)
+  case Ascending(String)
+  case Descending(String)
     
-    public var queryComponents: QueryComponents {
-        switch self {
-        case .Ascending(let field):
-            return QueryComponents(strings: [field, "ASC"])
-        case .Descending(let field):
-            return QueryComponents(strings: [field, "DESC"])
-        }
+  public var queryComponents: QueryComponents {
+    switch self {
+      case .Ascending(let field):
+        return QueryComponents(strings: [field, "ASC"])
+      case .Descending(let field):
+        return QueryComponents(strings: [field, "DESC"])
     }
+  }
 }
 
 public enum DeclaredFieldOrderBy {
-    case Ascending(DeclaredField)
-    case Descending(DeclaredField)
+  case Ascending(DeclaredField)
+  case Descending(DeclaredField)
     
-    public var normalize: OrderBy {
-        switch self {
-        case .Ascending(let field):
-            return .Ascending(field.qualifiedName)
-        case .Descending(let field):
-            return .Descending(field.qualifiedName)
-        }
+  public var normalize: OrderBy {
+    switch self {
+      case .Ascending(let field):
+        return .Ascending(field.qualifiedName)
+      case .Descending(let field):
+        return .Descending(field.qualifiedName)
     }
+  }
 }
 
 public enum ModelOrderBy<T: Model> {
-    case Ascending(T.Field)
-    case Descending(T.Field)
+  case Ascending(T.Field)
+  case Descending(T.Field)
     
-    public var normalize: DeclaredFieldOrderBy {
-        switch self {
-        case .Ascending(let field):
-            return .Ascending(T.field(field))
-        case .Descending(let field):
-            return .Descending(T.field(field))
-        }
+  public var normalize: DeclaredFieldOrderBy {
+    switch self {
+      case .Ascending(let field):
+        return .Ascending(T.field(field))
+      case .Descending(let field):
+        return .Descending(T.field(field))
     }
+  }
 }
 
 public extension Sequence where Self.Iterator.Element == OrderBy {
-    public var queryComponents: QueryComponents {
-        return QueryComponents(components: map { $0.queryComponents })
-    }
+  public var queryComponents: QueryComponents {
+    return QueryComponents(components: map { $0.queryComponents })
+  }
 }
 
 public protocol FetchQuery: TableQuery {
-    var offset: Offset? { get set }
-    var limit: Limit? { get set }
-    var orderBy: [OrderBy] { get set }
+  var offset: Offset? { get set }
+  var limit: Limit? { get set }
+  var orderBy: [OrderBy] { get set }
 }
 
 public extension FetchQuery {
-    public var pageSize: Int? {
-        get {
-            return limit?.value
-        }
-        set {
-            guard let value = newValue else {
-                limit = nil
-                return
-            }
-            limit = Limit(value)
-        }
+  public var pageSize: Int? {
+    get {
+      return limit?.value
     }
-    
-    public func page(_ value: Int?) -> Self {
-        var new = self
-        new.page = value
-        return new
+    set {
+      guard let value = newValue else {
+        limit = nil
+        return
+      }
+      limit = Limit(value)
     }
+  }
     
-    public func pageSize(_ value: Int?) -> Self {
-        var new = self
-        new.pageSize = value
-        return new
+  public func page(_ value: Int?) -> Self {
+    var new = self
+    new.page = value
+    return new
+  }
+    
+  public func pageSize(_ value: Int?) -> Self {
+    var new = self
+    new.pageSize = value
+    return new
+  }
+    
+  public var page: Int? {
+    set {
+      guard let value = newValue, let limit = limit else {
+        offset = nil
+        return
+      }
+      
+      offset = Offset(value * limit.value)
     }
-    
-    public var page: Int? {
-        set {
-            guard let value = newValue, let limit = limit else {
-                offset = nil
-                return
-            }
-            offset = Offset(value * limit.value)
-        }
         
-        get {
-            guard let offset = offset, let limit = limit else {
-                return nil
-            }
+    get {
+      guard let offset = offset, let limit = limit else {
+        return nil
+      }
             
-            return offset.value / limit.value
-        }
+      return offset.value / limit.value
+    }
+  }
+    
+  public func orderBy(_ values: [OrderBy]) -> Self {
+    var new = self
+    new.orderBy.append(contentsOf: values)
+    return new
+  }
+    
+  public func orderBy(_ values: OrderBy...) -> Self {
+    return orderBy(values)
+  }
+    
+  public func orderBy(_ values: [DeclaredFieldOrderBy]) -> Self {
+    return orderBy(values.map { $0.normalize })
+  }
+    
+  public func orderBy(_ values: DeclaredFieldOrderBy...) -> Self {
+    return orderBy(values)
+  }
+    
+  public func limit(_ value: Int?) -> Self {
+    var new = self
+    
+    if let value = value {
+      new.limit = Limit(value)
+    }
+    else {
+      new.limit = nil
     }
     
-    public func orderBy(_ values: [OrderBy]) -> Self {
-        var new = self
-        new.orderBy.append(contentsOf: values)
-        return new
+    return new
+  }
+    
+  public func offset(_ value: Int?) -> Self {
+    var new = self
+    
+    if let value = value {
+      new.offset = Offset(value)
+    }
+    else {
+      new.offset = nil
     }
     
-    public func orderBy(_ values: OrderBy...) -> Self {
-        return orderBy(values)
-    }
-    
-    public func orderBy(_ values: [DeclaredFieldOrderBy]) -> Self {
-        return orderBy(values.map { $0.normalize })
-    }
-    
-    public func orderBy(_ values: DeclaredFieldOrderBy...) -> Self {
-        return orderBy(values)
-    }
-    
-    public func limit(_ value: Int?) -> Self {
-        var new = self
-        if let value = value {
-            new.limit = Limit(value)
-        }
-        else {
-            new.limit = nil
-        }
-        return new
-    }
-    
-    public func offset(_ value: Int?) -> Self {
-        var new = self
-        if let value = value {
-            new.offset = Offset(value)
-        }
-        else {
-            new.offset = nil
-        }
-        return new
-    }
+    return new
+  }
 }
 
 public protocol FilteredQuery: Query {
-    var condition: Condition? { get set }
+  var condition: Condition? { get set }
 }
 
 extension FilteredQuery {
-    public func filter(_ condition: Condition) -> Self {
-        let newCondition: Condition
-        if let existing = self.condition {
-            newCondition = .And([existing, condition])
-        }
-        else {
-            newCondition = condition
-        }
-        
-        var new = self
-        new.condition = newCondition
-        
-        return new
+  public func filter(_ condition: Condition) -> Self {
+    let newCondition: Condition
+    
+    if let existing = self.condition {
+      newCondition = .And([existing, condition])
     }
+    else {
+      newCondition = condition
+    }
+        
+    var new = self
+    new.condition = newCondition
+        
+    return new
+  }
 }
 
 
 public struct Join: QueryComponentsConvertible {
-    public enum JoinType: QueryComponentsConvertible {
-        case Inner
-        case Outer
-        case Left
-        case Right
+  public enum JoinType: QueryComponentsConvertible {
+    case Inner
+    case Outer
+    case Left
+    case Right
         
-        public var queryComponents: QueryComponents {
-            switch self {
-            case .Inner:
-                return "INNER"
-            case .Outer:
-                return "OUTER"
-            case .Left:
-                return "LEFT"
-            case .Right:
-                return "RIGHT"
-            }
-        }
-    }
-    
-    public let tableName: String
-    public let types: [JoinType]
-    public let leftKey: String
-    public let rightKey: String
-    
-    public init(_ tableName: String, type: [JoinType], leftKey: String, rightKey: String) {
-        self.tableName = tableName
-        self.types = type
-        self.leftKey = leftKey
-        self.rightKey = rightKey
-    }
-    
     public var queryComponents: QueryComponents {
-        return QueryComponents(components: [
-            types.queryComponents,
-            "JOIN",
-            QueryComponents(strings: [
-                tableName,
-                "ON",
-                leftKey,
-                "=",
-                rightKey
-                ]
-            )
-            ]
-        )
+      switch self {
+        case .Inner:
+          return "INNER"
+        case .Outer:
+          return "OUTER"
+        case .Left:
+          return "LEFT"
+        case .Right:
+          return "RIGHT"
+      }
     }
+  }
+    
+  public let tableName: String
+  public let types: [JoinType]
+  public let leftKey: String
+  public let rightKey: String
+    
+  public init(_ tableName: String, type: [JoinType], leftKey: String, rightKey: String) {
+    self.tableName = tableName
+    self.types = type
+    self.leftKey = leftKey
+    self.rightKey = rightKey
+  }
+    
+  public var queryComponents: QueryComponents {
+    return QueryComponents(components: [
+      types.queryComponents,
+      "JOIN",
+      QueryComponents(strings: [
+        tableName,
+        "ON",
+        leftKey,
+        "=",
+        rightKey
+      ])
+    ])
+  }
 }
-

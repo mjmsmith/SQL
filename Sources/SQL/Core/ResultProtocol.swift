@@ -23,65 +23,64 @@
 // SOFTWARE.
 
 public protocol ResultStatus {
-    var successful: Bool { get }
+  var successful: Bool { get }
 }
 
 public protocol ResultProtocol: Collection {
-    associatedtype FieldInfoProtocolType: FieldInfoProtocol
-    associatedtype Iterator: RowIteratorProtocol = RowIterator
+  associatedtype FieldInfoProtocolType: FieldInfoProtocol
+  associatedtype Iterator: RowIteratorProtocol = RowIterator
 
-    func clear()
+  var fields: [FieldInfoProtocolType] { get }
+  var count: Int { get }
 
-    var fields: [FieldInfoProtocolType] { get }
+  func clear()
 
-    subscript(index: Int) -> Row { get }
-
-    var count: Int { get }
+  subscript(index: Int) -> Row { get }
 }
 
 public protocol RowIteratorProtocol: IteratorProtocol {
-    associatedtype Element: RowProtocol = Row
+  associatedtype Element: RowProtocol = Row
 }
 
 public struct RowIterator: RowIteratorProtocol {
-    public typealias Element = Row
+  public typealias Element = Row
 
-    let block: (Void) -> Element?
-    var index: Int = 0
+  let block: (Void) -> Element?
+  var index: Int = 0
 
-    init(block: @escaping (Void) -> Element?) {
-        self.block = block
-    }
+  init(block: @escaping (Void) -> Element?) {
+    self.block = block
+  }
 
-    public func next() -> Element? {
-        return block()
-    }
+  public func next() -> Element? {
+    return block()
+  }
 }
 
 extension ResultProtocol {
-
-    public func makeIterator() -> RowIterator {
-        var index = 0
-        return RowIterator {
-            if index < 0 || index >= self.count {
-                return nil
-            }
-
-            let row = self[index]
-            index += 1
-            return row
-        }
-    }
-
-    public var startIndex: Int {
-        return 0
-    }
-
-    public var endIndex: Int {
-        return count
-    }
+  public func makeIterator() -> RowIterator {
+    var index = 0
     
-    public func index(after: Int) -> Int {
-        return after + 1
+    return RowIterator {
+      if index < 0 || index >= self.count {
+        return nil
+      }
+
+      let row = self[index]
+      index += 1
+      return row
     }
+  }
+
+  public var startIndex: Int {
+    return 0
+  }
+
+  public var endIndex: Int {
+    return count
+  }
+    
+  public func index(after: Int) -> Int {
+    return after + 1
+  }
 }

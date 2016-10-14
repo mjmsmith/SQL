@@ -25,129 +25,123 @@
 import Foundation
 
 public struct Row: RowProtocol {
+  public var dataByfield: [String: Data?]
     
-    public var dataByfield: [String: Data?]
-    
-    public init(dataByfield: [String: Data?]) {
-        self.dataByfield = dataByfield
-    }
+  public init(dataByfield: [String: Data?]) {
+    self.dataByfield = dataByfield
+  }
 }
 
 public protocol RowProtocol: CustomStringConvertible {
-    init(dataByfield: [String: Data?])
+  init(dataByfield: [String: Data?])
     
-    var fields: [String] { get }
-    
-    var dataByfield: [String: Data?] { get }
+  var fields: [String] { get }
+  var dataByfield: [String: Data?] { get }
 }
 
 public enum RowProtocolError: Error {
-    case ExpectedField(DeclaredField)
-    case UnexpectedNilValue(DeclaredField)
+  case ExpectedField(DeclaredField)
+  case UnexpectedNilValue(DeclaredField)
 }
 
 public extension RowProtocol {
+  public var fields: [String] {
+    return Array(dataByfield.keys)
+  }
     
-    public var fields: [String] {
-        return Array(dataByfield.keys)
-    }
+  // MARK: - Data
     
-    // MARK: - Data
+  public func data(_ field: DeclaredField) throws -> Data? {
+    /*
+     Supplying a fielName can done either
+     1. Qualified, e.g. 'users.id'
+     2. Non-qualified e.g. 'id'
+         
+     A statement will cast qualified fields from 'users.id' to 'users__id'
+         
+     Because of this, a given field name must be checked for three type of keys
+    */
     
-    public func data(_ field: DeclaredField) throws -> Data? {
+    let fieldCandidates = [
+      field.unqualifiedName,
+      field.alias,
+      field.qualifiedName
+    ]
         
-        /*
-         Supplying a fielName can done either
-         1. Qualified, e.g. 'users.id'
-         2. Non-qualified e.g. 'id'
-         
-         A statement will cast qualified fields from 'users.id' to 'users__id'
-         
-         Because of this, a given field name must be checked for three type of keys
-         
-         */
-        let fieldCandidates = [
-            field.unqualifiedName,
-            field.alias,
-            field.qualifiedName
-        ]
+    var data: Data??
         
-        var data: Data??
-        
-        for fieldNameCandidate in fieldCandidates {
-            data = dataByfield[fieldNameCandidate]
+    for fieldNameCandidate in fieldCandidates {
+      data = dataByfield[fieldNameCandidate]
             
-            if data != nil {
-                break
-            }
-        }
+      if data != nil {
+        break
+      }
+    }
         
-        guard let result = data else {
-            throw RowProtocolError.ExpectedField(field)
-        }
-        return result
+    guard let result = data else {
+      throw RowProtocolError.ExpectedField(field)
     }
     
-    public func data(_ field: DeclaredField) throws -> Data {
-        guard let data: Data = try data(field) else {
-            throw RowProtocolError.UnexpectedNilValue(field)
-        }
-        
-        return data
-    }
+    return result
+  }
     
-    public func data(_ field: String) throws -> Data {
-        let field = DeclaredField(name: field)
-        guard let data: Data = try data(field) else {
-            throw RowProtocolError.UnexpectedNilValue(field)
-        }
-        
-        return data
+  public func data(_ field: DeclaredField) throws -> Data {
+    guard let data: Data = try data(field) else {
+      throw RowProtocolError.UnexpectedNilValue(field)
     }
+        
+    return data
+  }
+    
+  public func data(_ field: String) throws -> Data {
+    let field = DeclaredField(name: field)
+    
+    guard let data: Data = try data(field) else {
+      throw RowProtocolError.UnexpectedNilValue(field)
+    }
+        
+    return data
+  }
     
     // MARK: - SQLDataConvertible
     
-    public func value<T: SQLDataConvertible>(_ field: DeclaredField) throws -> T? {
-        guard let data: Data = try data(field) else {
-            return nil
-        }
+  public func value<T: SQLDataConvertible>(_ field: DeclaredField) throws -> T? {
+    guard let data: Data = try data(field) else {
+      return nil
+    }
         
-        return try T(rawSQLData: data)
-    }
+    return try T(rawSQLData: data)
+  }
     
-    public func value<T: SQLDataConvertible>(_ field: DeclaredField) throws -> T {
-        guard let data: Data = try data(field) else {
-            throw RowProtocolError.UnexpectedNilValue(field)
-        }
+  public func value<T: SQLDataConvertible>(_ field: DeclaredField) throws -> T {
+    guard let data: Data = try data(field) else {
+      throw RowProtocolError.UnexpectedNilValue(field)
+    }
         
-        return try T(rawSQLData: data)
-    }
+    return try T(rawSQLData: data)
+  }
     
-    // MARK - String support
+  // MARK - String support
     
-    public func data(field: String) throws -> Data? {
-        return try data(DeclaredField(name: field))
-    }
+  public func data(field: String) throws -> Data? {
+    return try data(DeclaredField(name: field))
+  }
     
-    public func value<T: SQLDataConvertible>(_ field: String) throws -> T? {
-        return try value(DeclaredField(name: field))
-    }
+  public func value<T: SQLDataConvertible>(_ field: String) throws -> T? {
+    return try value(DeclaredField(name: field))
+  }
     
-    public func value<T: SQLDataConvertible>(_ field: String) throws -> T {
-        return try value(DeclaredField(name: field))
-    }
+  public func value<T: SQLDataConvertible>(_ field: String) throws -> T {
+    return try value(DeclaredField(name: field))
+  }
     
-    
-    public var description: String {        
-        return dataByfield.map {
-            (key, value) in
+  public var description: String {        
+    return dataByfield.map { (key, value) in
+      guard let value = value else {
+        return "NULL"
+      }
             
-            guard let value = value else {
-                return "NULL"
-            }
-            
-            return "\(key): \(value)"
-        }.joined(separator: ", ")
-
-    }
+      return "\(key): \(value)"
+    }.joined(separator: ", ")
+  }
 }

@@ -23,108 +23,101 @@
 // SOFTWARE.
 
 public struct Update: UpdateQuery {
-    public let tableName: String
+  public let tableName: String
+  public var valuesByField: [DeclaredField: SQLData?]
+  public var condition: Condition?
     
-    public var valuesByField: [DeclaredField: SQLData?]
+  public init(_ tableName: String, set valuesByField: [DeclaredField : SQLData?] = [:]) {
+    self.tableName = tableName
+    self.valuesByField = valuesByField
+  }
     
-    public var condition: Condition?
-    
-    public init(_ tableName: String, set valuesByField: [DeclaredField : SQLData?] = [:]) {
-        self.tableName = tableName
-        self.valuesByField = valuesByField
+  public init(_ tableName: String, set valuesByField: [DeclaredField : SQLDataConvertible?] = [:]) {
+    var dict = [DeclaredField: SQLData?]()
+        
+    for (key, value) in valuesByField {
+      dict[key] = value?.sqlData
     }
+        
+    self.init(tableName, set: dict)
+  }
     
-    public init(_ tableName: String, set valuesByField: [DeclaredField : SQLDataConvertible?] = [:]) {
+  public init(_ tableName: String, set valuesByField: [String : SQLDataConvertible?] = [:]) {
+    var dict = [DeclaredField: SQLData?]()
         
-        var dict = [DeclaredField: SQLData?]()
-        
-        for (key, value) in valuesByField {
-            dict[key] = value?.sqlData
-        }
-        
-        self.init(tableName, set: dict)
+    for (key, value) in valuesByField {
+      dict[DeclaredField(name: key)] = value?.sqlData
     }
-    
-    public init(_ tableName: String, set valuesByField: [String : SQLDataConvertible?] = [:]) {
         
-        var dict = [DeclaredField: SQLData?]()
-        
-        for (key, value) in valuesByField {
-            dict[DeclaredField(name: key)] = value?.sqlData
-        }
-        
-        self.init(tableName, set: dict)
-    }
+    self.init(tableName, set: dict)
+  }
 }
 
 public struct ModelUpdate<T: Model>: UpdateQuery {
-    public typealias ModelType = T
+  public typealias ModelType = T
     
-    public var tableName: String {
-        return T.tableName
-    }
+  public var tableName: String {
+    return T.tableName
+  }
     
-    public var valuesByField: [DeclaredField: SQLData?] = [:]
+  public var valuesByField: [DeclaredField: SQLData?] = [:]
+  public var condition: Condition?
     
-    public var condition: Condition?
-    
-    public init(_ values: [ModelType.Field: SQLData?]) {
-        var dict = [DeclaredField: SQLData?]()
+  public init(_ values: [ModelType.Field: SQLData?]) {
+    var dict = [DeclaredField: SQLData?]()
         
-        for (key, value) in values {
-            dict[ModelType.field(key)] = value
-        }
+    for (key, value) in values {
+      dict[ModelType.field(key)] = value
+    }
         
-        self.valuesByField = dict
-    }
+    self.valuesByField = dict
+  }
     
-    public init(_ values: [ModelType.Field: SQLDataConvertible?]) {
-        var dict = [DeclaredField: SQLData?]()
+  public init(_ values: [ModelType.Field: SQLDataConvertible?]) {
+    var dict = [DeclaredField: SQLData?]()
         
-        for (key, value) in values {
-            dict[ModelType.field(key)] = value?.sqlData
-        }
+    for (key, value) in values {
+      dict[ModelType.field(key)] = value?.sqlData
+    }
         
-        self.valuesByField = dict
-    }
+    self.valuesByField = dict
+  }
     
-    public mutating func set(_ value: SQLData?, forField field: ModelType.Field) {
-        set(value, forField: ModelType.field(field))
-    }
+  public mutating func set(_ value: SQLData?, forField field: ModelType.Field) {
+    set(value, forField: ModelType.field(field))
+  }
     
-    public mutating func set(_ value: SQLDataConvertible?, forField field: ModelType.Field) {
-        set(value?.sqlData, forField: field)
-    }
+  public mutating func set(_ value: SQLDataConvertible?, forField field: ModelType.Field) {
+    set(value?.sqlData, forField: field)
+  }
 }
 
 public protocol UpdateQuery: FilteredQuery, TableQuery {
-    var valuesByField: [DeclaredField: SQLData?] { get set }
+  var valuesByField: [DeclaredField: SQLData?] { get set }
 }
 
 public extension UpdateQuery {
+  public mutating func set(_ value: SQLData?, forField field: DeclaredField) {
+    valuesByField[field] = value
+  }
     
-    public mutating func set(_ value: SQLData?, forField field: DeclaredField) {
-        valuesByField[field] = value
-    }
+  public mutating func set(_ value: SQLDataConvertible?, forField field: DeclaredField) {
+    self.set(value?.sqlData, forField: field)
+  }
     
-    public mutating func set(_ value: SQLDataConvertible?, forField field: DeclaredField) {
-        self.set(value?.sqlData, forField: field)
-    }
-    
-    public var queryComponents: QueryComponents {
-        var components =  QueryComponents(components: [
-            "UPDATE",
-            QueryComponents(tableName),
-            "SET",
-            valuesByField.map { $0 }.queryComponentsForSettingValues(useQualifiedNames: false)
-            ]
-        )
+  public var queryComponents: QueryComponents {
+    var components =  QueryComponents(components: [
+      "UPDATE",
+      QueryComponents(tableName),
+      "SET",
+      valuesByField.map { $0 }.queryComponentsForSettingValues(useQualifiedNames: false)
+    ])
         
-        if let condition = condition {
-            components.append("WHERE")
-            components.append(condition.queryComponents)
-        }
-        
-        return components
+    if let condition = condition {
+      components.append("WHERE")
+      components.append(condition.queryComponents)
     }
+        
+    return components
+  }
 }

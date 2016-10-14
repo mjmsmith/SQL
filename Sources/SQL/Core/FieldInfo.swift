@@ -23,11 +23,11 @@
 // SOFTWARE.
 
 public protocol FieldInfoProtocol: CustomStringConvertible {
-    var name: String { get }
+  var name: String { get }
 }
 
 public extension FieldInfoProtocol {
-    public var description: String {
-        return name
-    }
+  public var description: String {
+    return name
+  }
 }

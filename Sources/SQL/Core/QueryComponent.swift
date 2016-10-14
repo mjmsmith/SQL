@@ -26,139 +26,134 @@ import Foundation
 
 
 public struct QueryComponents: CustomStringConvertible {
+  internal static let valuePlaceholder = "%@"
     
-    internal static let valuePlaceholder = "%@"
+  public struct QueryComponentsError: Error {
+    public let description: String
+  }
     
-    public struct QueryComponentsError: Error {
-        public let description: String
-    }
-    
-    public var stringComponents: [String]
-    public var values: [SQLData?]
+  public var stringComponents: [String]
+  public var values: [SQLData?]
 
-    public var string: String {
-      return stringComponents.filter { !$0.isEmpty }.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.joined(separator: " ")
-    }
+  public var string: String {
+    return stringComponents.filter { !$0.isEmpty }.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.joined(separator: " ")
+  }
     
-    public func stringWithEscapedValuesUsingPrefix(_ prefix: String, suffix: String? = nil, transformer: (Int, SQLData?) -> String) throws -> String {
+  public func stringWithEscapedValuesUsingPrefix(_ prefix: String, suffix: String? = nil, transformer: (Int, SQLData?) -> String) throws -> String {
+    var strings = string.components(separatedBy: QueryComponents.valuePlaceholder)
         
-        var strings = string.components(separatedBy: QueryComponents.valuePlaceholder)
+    if strings.count == 1 {
+      return string
+    }
         
-        if strings.count == 1 {
-            return string
-        }
+    guard strings.count == values.count + 1 else {
+      throw QueryComponentsError(description: "Parameter count mismatch")
+    }
         
-        guard strings.count == values.count + 1 else {
-            throw QueryComponentsError(description: "Parameter count mismatch")
-        }
+    var newStrings = [String]()
         
-        var newStrings = [String]()
-        
-        for i in 0..<values.count {
-            newStrings.append(strings[i])
-            newStrings.append(prefix)
-            newStrings.append(transformer(i, values[i]))
+    for i in 0..<values.count {
+      newStrings.append(strings[i])
+      newStrings.append(prefix)
+      newStrings.append(transformer(i, values[i]))
             
-            if let suffix = suffix {
-                newStrings.append(suffix)
-            }
-        }
-        
-        newStrings.append(strings.last!)
-        
-        return newStrings.joined(separator: "")
+      if let suffix = suffix {
+        newStrings.append(suffix)
+      }
     }
+        
+    newStrings.append(strings.last!)
+        
+    return newStrings.joined(separator: "")
+  }
 
-    public init() {
-        stringComponents = []
-        values = []
-    }
+  public init() {
+    stringComponents = []
+    values = []
+  }
     
-    public init(components: [QueryComponents], mergedByString string: String? = nil) {
-        var stringComponents = [String]()
-        for (i, component) in components.enumerated() {
-            stringComponents += component.stringComponents
+  public init(components: [QueryComponents], mergedByString string: String? = nil) {
+    var stringComponents = [String]()
+    
+    for (i, component) in components.enumerated() {
+      stringComponents += component.stringComponents
             
-            if i < components.count - 1, let mergeString = string {
-                stringComponents.append(mergeString)
-            }
-        }
+      if i < components.count - 1, let mergeString = string {
+        stringComponents.append(mergeString)
+      }
+    }
         
-        self.stringComponents = stringComponents
-        self.values = components.flatMap { $0.values }
-        
-    }
+    self.stringComponents = stringComponents
+    self.values = components.flatMap { $0.values }
+  }
     
-    public init(strings: [String], values: [SQLData?] = []) {
-        self.stringComponents = strings
-        self.values = values
-    }
+  public init(strings: [String], values: [SQLData?] = []) {
+    self.stringComponents = strings
+    self.values = values
+  }
     
-    public init(_ string: String, values: [SQLData?] = []) {
-        self.init(strings: [string], values: values)
-    }
+  public init(_ string: String, values: [SQLData?] = []) {
+    self.init(strings: [string], values: values)
+  }
 
-    public func isolate() -> QueryComponents {
-        return QueryComponents("(" + stringComponents.joined(separator: " ") + ")", values: values)
-    }
+  public func isolate() -> QueryComponents {
+    return QueryComponents("(" + stringComponents.joined(separator: " ") + ")", values: values)
+  }
 
-    public mutating func append(_ component: QueryComponents) {
-        stringComponents += component.stringComponents
-        values += component.values
-    }
+  public mutating func append(_ component: QueryComponents) {
+    stringComponents += component.stringComponents
+    values += component.values
+  }
     
-    public mutating func prepend(_ component: QueryComponents) {
-        stringComponents = component.stringComponents + stringComponents
-        values = component.values + values
-    }
+  public mutating func prepend(_ component: QueryComponents) {
+    stringComponents = component.stringComponents + stringComponents
+    values = component.values + values
+  }
     
-    public var description: String {
-        guard let result = (try? stringWithEscapedValuesUsingPrefix("'", suffix: "'") {
-            index, value in
-        
-            guard let value = value else {
-                return "NULL"
-            }
+  public var description: String {
+    guard let result = (try? stringWithEscapedValuesUsingPrefix("'", suffix: "'") { index, value in
+      guard let value = value else {
+        return "NULL"
+      }
             
-            switch value {
-            case .Text(let string):
-                return string
-            default:
-                return "BINARY DATA"
-            }
-        
-        }) else {
-            return string
-        }
-        
-        return result
+      switch value {
+        case .Text(let string):
+          return string
+        default:
+          return "BINARY DATA"
+      }        
+    }) else {
+      return string
     }
+        
+    return result
+  }
 }
 
 extension QueryComponents: ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
-        self.init(value)
-    }
+  public init(stringLiteral value: String) {
+    self.init(value)
+  }
     
-    public init(unicodeScalarLiteral value: String) {
-        self.init(stringLiteral: value)
-    }
+  public init(unicodeScalarLiteral value: String) {
+    self.init(stringLiteral: value)
+  }
     
-    public init(extendedGraphemeClusterLiteral value: String) {
-        self.init(stringLiteral: value)
-    }
+  public init(extendedGraphemeClusterLiteral value: String) {
+    self.init(stringLiteral: value)
+  }
 }
 
 public protocol QueryComponentsConvertible {
-    var queryComponents: QueryComponents { get }
+  var queryComponents: QueryComponents { get }
 }
 
 public extension Sequence where Iterator.Element: QueryComponentsConvertible {
-    public func queryComponents(mergedByString string: String? = nil) -> QueryComponents {
-        return QueryComponents(components: self.map { $0.queryComponents }, mergedByString: string)
-    }
+  public func queryComponents(mergedByString string: String? = nil) -> QueryComponents {
+    return QueryComponents(components: self.map { $0.queryComponents }, mergedByString: string)
+  }
     
-    public var queryComponents: QueryComponents {
-        return queryComponents()
-    }
+  public var queryComponents: QueryComponents {
+    return queryComponents()
+  }
 }
