@@ -63,21 +63,11 @@ public struct ModelUpdate<T: Model>: UpdateQuery {
   public var valuesByField: [DeclaredField: SQLData?] = [:]
   public var condition: Condition?
     
-  public init(_ values: [ModelType.Field: SQLData?]) {
-    var dict = [DeclaredField: SQLData?]()
-        
-    for (key, value) in values {
-      dict[ModelType.field(key)] = value
-    }
-        
-    self.valuesByField = dict
-  }
-    
   public init(_ values: [ModelType.Field: SQLDataConvertible?]) {
     var dict = [DeclaredField: SQLData?]()
         
     for (key, value) in values {
-      dict[ModelType.field(key)] = value?.sqlData
+      dict[ModelType.field(key)] = value?.sqlData ?? Optional(nil)
     }
         
     self.valuesByField = dict
