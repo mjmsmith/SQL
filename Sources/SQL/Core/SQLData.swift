@@ -25,7 +25,11 @@
 import Foundation
 
 public struct SQLDataConversionError: Error {
-  let description: String
+  public let description: String
+
+  public init(description: String) {
+    self.description = description
+  }
 }
 
 public enum SQLData {
