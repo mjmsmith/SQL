@@ -138,6 +138,10 @@ public extension DeclaredField {
   public func like<T: SQLDataConvertible>(_ value: T?) -> Condition {
     return .Like(self, value?.sqlData)
   }
+
+  public func likeIgnoringCase<T: SQLDataConvertible>(_ value: T?) -> Condition {
+    return .ILike(self, value?.sqlData)
+  }
 }
 
 public func == <T: SQLDataConvertible>(lhs: DeclaredField, rhs: T?) -> Condition {
